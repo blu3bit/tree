@@ -1,0 +1,19 @@
+<html>
+<head>
+<!-- gui -->
+<link rel="icon" type="image/png" href="/favicon.ico">
+<script src="./oo/oo.js"></script>
+<script src="./oo/gesture-oo.js"></script>
+<script src="./oo/ease-oo.js"></script>
+<script src="./oo/infinite-list-tug-oo.js"></script>
+<!-- simshim -->
+<script type="module">
+    import {createSimshim} from './tree/simshim/simshim.js';
+    window.onload = () => createSimshim('simshim');
+</script>
+</head>
+<body>
+    <div id='simshim'></div>
+</body>
+</html>
+

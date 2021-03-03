@@ -1,0 +1,202 @@
+<script src="./oo.js"></script>
+<body id="container">
+</body>
+<script>
+    window.onload = () => {
+        const body = OO(document.getElementById('container'), undefined, undefined,  {debug:2})('div'),
+              {set} = body.$;
+              go = body.go;
+
+        // shim history example:
+        //body.context.history = (function() {
+        //    const arr = [],
+        //          curr = {};
+
+        //    function replaceState(state, title, href) {
+        //        //console.log(state, title, href);
+        //        curr.title = title;
+        //        curr.href = href;
+        //        arr[arr.length-1] = state;
+        //        history.replaceState(state, title, href);
+        //    }
+
+        //    function pushState(state, title, href) {
+        //        //console.log(state, title, href);
+        //        curr.title = title;
+        //        curr.href = href;
+        //        arr.push(state);
+        //        history.pushState(state, title, href);
+        //    }
+
+        //    function popState() {
+        //        arr.pop();
+        //        const state = arr[arr.length-1];
+        //        console.log({state});
+        //        return state;
+        //    }
+
+        //    return {
+        //        onpopstate: l => { 
+        //            window.onpopstate = () => {
+        //                const state = popState();
+        //                return l({state});
+        //            };
+        //        },
+        //        replaceState,
+        //        pushState
+        //    };
+        //})();
+
+        //const body = OO(document.getElementById('container'), undefined, undefined,  undefined, 5)('div');
+        body.stylesheet(
+            `
+            App {
+                margin: 10;
+                margin-top: 10;
+                background-color: azure;
+            }
+             `, 'main'
+        );
+        body('h3', 'OO and Routes');
+        body('span', 'Routes are stored in the store,');
+        body('span', 'and you listen to routes using expressions.');
+        body('span', 'Note: OO work in the single-page app paradigm, which implies that nagivating BACK is NOT an "undo".');
+        body('span', 'Navigating back or forward is just like following a link.');
+        body('span', 'This implies that possible state changes will be preserved.');
+        body('span', 'This is also the reason why "old pages" will be visible when following some of the links here.');
+        body('span', 'To handle the transitioning between URLs, first createAct and  then use the utilities.');
+        body('br');
+        body('br');
+
+
+        function App(oo) {
+            oo('span', '[CODE] route');
+            oo('br');
+            oo('button', '[200 OK] /view/page1').onclick(() => go('/view/page1'));
+            oo('button', '[200 OK] /view/page2').onclick(() => go('/view/page2'));
+            oo('button', '[200 OK] /view/param1/example').onclick(() => go('/view/param1/example'));
+            oo('button', '[200 OK] /view/not/found/example').onclick(() => go('/view/not/found/example'));
+            oo('button', '[200 OK] /woow/page2').onclick(() => go('/woow/page2'));
+            oo('button', '[302 OK] /no/where1').onclick(() => go('/no/where1'));
+            oo('button', '[302 OK] /no/where2').onclick(() => go('/no/where2'));
+            oo('button', '[200 OK] /heaven/nirvana').onclick(() => go('/heaven/nirvana'));
+            oo('br');
+        }
+
+        function createRouter(app) {
+            const cue = app.createCue(app);
+            app.route('/view/page1', () => {
+                cue({Page1});
+            });
+            app.route('/view/page2', () => cue({Page2, props:{smurf:'smyrf burger'}}));
+            app.route('/view/param1/:pongo', ({props}) => {
+                cue('all', {destroy: true, except:[Page2, 'Page1']}, () => {
+                    cue({Param1, props});
+                });
+            });
+            app.route('/woow', () => {
+                cue({Woow});
+                //return true; // undefined is treated as truthy, i.e. continue parsing route with next handler
+            }, route => {
+                console.log('Page2 will be parsed in next route handler.', route);
+                route('/page2', () => { console.log('/page2 route triggered');
+                    cue({Page2, props:{smurf:'I exist'}});
+                });
+            });
+            app.route('/heaven/nirvana', () => {
+                cue({Nirvarna});
+            });
+
+            // redirects are easy to do
+            app.route(302, '/no/where1', () => {
+                console.log('*** callback invoked. redirect to page one***');
+                app.go('/view/page1');
+            });
+
+            app.route(302, '/no/where2', () => {
+                alert('will wait a while then redirect');
+                cue({Param1});
+                setTimeout(() => {
+                    console.log('callback invoked. delayed redirect');
+                    app.go('/view/page2');
+                }, 2000);
+            }); 
+
+
+            // Rotuer process handlers in the order they were added,
+            // hence "match all" has to be added last, just like this.
+            // * = will match everything after the *
+            app.route('/willNeverTrigger/*', () => {
+                cue({NotFound404, props:{hello:'mars'}});
+            });
+            app.route('/view/*', () => {
+                cue({NotFound404, props:{hello:'view'}}); 
+            });
+            app.route('/*', () => {
+                cue({NotFound404, props:{hello:'all'}});
+            });
+        }
+
+        function Woow(oo) {
+            oo('span', 'Woow');
+            oo('div');
+        }
+
+        function Page1(oo) {
+            oo('span', 'This is Page1. You came to me using this href: ' + oo.$('route/url/href'));
+            oo('br');
+            oo('span', 'Route related data is fed into the store, so you can get it using oo.$$("route/url/href")');
+            oo('span', 'And since its in the store, you can of course also observe changes to the route using oo.on()');
+        }
+
+        function Page2(oo, props) {
+            oo('span', 'This is Page2. Props provided in router: smurf='+props.smurf);
+            oo('br');
+            oo('span', 'As a convenience the route data is also accessible in the props.');
+        }
+
+        function Page3(oo) {
+            oo('span', 'This is Page3');
+        }
+
+        function Param1(oo, props) {
+            console.log('Param1 Tug was invoked. All the URL related data can be found in props:', {props});
+            oo('span', 'Param1. the :pongo param segment is: ' + props.pongo);
+            oo('br');
+            oo('span', 'Just as with the URL, params are also fed to the the store at route/params (hence accessible throughout the application): ' + JSON.stringify(oo.$('route/params')) );
+        }
+
+        function NotFound404(oo, props) {
+            oo('span', '404: Page not found. Hello='+props.hello);
+        }
+
+        function Nirvarna(oo) {
+            oo('button', 'Drink water').onclick(() => {
+                set('nirvana/water', 'dry in the sun');
+            });
+            oo('button', 'Surf cloud').onclick(() => {
+                set('nirvana/cloud', 'dance in rain');
+            });
+
+            oo('span', 'Do fun stuff')
+                .on('$nirvana/water', 'b', ($, o) => {
+                    console.log('chain onto', o.elm);
+                    o('div', 'water='+$);
+                })
+                .on('$nirvana/cloud', {Umbrella, props: {stuff: 'hands'}}, ($, o) => {
+                    o('div', 'cloud='+$);
+                });
+        }
+
+        function Umbrella(oo, props) {
+            oo('b', 'Use your: ' + props.stuff);
+        }
+
+        const app = body(App);
+        createRouter(app);
+        // go to landing page.
+        // this will trigger route listeners and give a change to populate app with data etc
+        //app.go('/view/page1');
+     };
+</script>
+
